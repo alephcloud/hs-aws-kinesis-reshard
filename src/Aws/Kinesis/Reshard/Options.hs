@@ -89,7 +89,7 @@ sampleDurationParser =
 capacityThresholdReader ∷ ReadM Double
 capacityThresholdReader = do
   cap ← auto
-  if | cap > 0 ∧ cap <= 1 → return cap
+  if | cap > 0 ∧ cap ≤ 1 → return cap
      | otherwise → readerError "Capacity threshold must be in range [0,1)"
 
 capacityThresholdParser ∷ Parser Double

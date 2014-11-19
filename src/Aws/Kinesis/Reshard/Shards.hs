@@ -124,7 +124,7 @@ fetchOpenShards = do
     $= CL.filter shardIsOpen
     $$ CL.consume
   let orderShards s s' = compare (endingHashKey s) (endingHashKey s')
-      endingHashKey = view _2 . shardHashKeyRange
+      endingHashKey = view _2 ∘ shardHashKeyRange
   return $ L.sortBy orderShards shards
 
 countOpenShards
