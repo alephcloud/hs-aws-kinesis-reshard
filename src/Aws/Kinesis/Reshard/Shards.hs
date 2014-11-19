@@ -27,6 +27,7 @@
 
 module Aws.Kinesis.Reshard.Shards
 ( fetchOpenShards
+, countOpenShards
 ) where
 
 import Aws
@@ -45,6 +46,7 @@ import Control.Lens
 import Control.Monad.Error.Hoist
 import Control.Monad.Trans
 
+import qualified Data.List as L
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -87,10 +89,31 @@ shardIsOpen =
     ∘ view _2
     ∘ shardSequenceNumberRange
 
+counterSink
+  ∷ ( Monad m
+    , Integral i
+    )
+  ⇒ Sink α m i
+counterSink =
+  CL.fold (\i _ → i + 1)  0
+
 fetchOpenShards
   ∷ MonadReshard m
   ⇒ m [Shard]
-fetchOpenShards =
-  shardsSource
+fetchOpenShards = do
+  shards ← shardsSource
     $= CL.filter shardIsOpen
     $$ CL.consume
+  let orderShards s s' = compare (endingHashKey s) (endingHashKey s')
+      endingHashKey = view _2 . shardHashKeyRange
+  return $ L.sortBy orderShards shards
+
+countOpenShards
+  ∷ ( MonadReshard m
+    , Integral i
+    )
+  ⇒ m i
+countOpenShards =
+  shardsSource
+    $= CL.filter shardIsOpen
+    $$ counterSink
