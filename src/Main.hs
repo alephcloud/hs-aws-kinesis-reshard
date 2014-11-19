@@ -35,7 +35,6 @@ import Aws.Kinesis.Reshard.Shards
 import Control.Applicative
 import Control.Applicative.Unicode
 import Control.Concurrent.Async.Lifted
-import Control.Lens
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Reader (runReaderT)
@@ -52,7 +51,7 @@ app = do
     let bps = Concurrently ∘ getBytesPerSecond
     in pure (/)
       ⊛ (pure (+) ⊛ bps KinesisPutRecord ⊛ bps KinesisPutRecords)
-      ⊛ Concurrently (fromIntegral <$> countOpenShards)
+      ⊛ Concurrently (fromInteger <$> countOpenShards)
 
   liftIO $ print result
   return ()

@@ -31,28 +31,17 @@ module Aws.Kinesis.Reshard.Shards
 , awaitStreamActive
 ) where
 
-import Aws
 import Aws.Core
-import Aws.General
 import Aws.Kinesis
 import Aws.Kinesis.Reshard.Common
-import Aws.Kinesis.Reshard.Exception
 import Aws.Kinesis.Reshard.Monad
-import Aws.Kinesis.Reshard.Options
 
-import Control.Applicative
-import Control.Applicative.Unicode
-import Control.Exception.Lifted
 import Control.Lens
-import Control.Monad.Error.Hoist
 import Control.Monad.Trans
 import Control.Monad.Unicode
 
 import qualified Data.List as L
 import Data.Maybe
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import Data.Typeable
 import Data.Conduit
 import qualified Data.Conduit.List as CL
 import Prelude.Unicode
@@ -61,11 +50,11 @@ awaitStreamActive
   ∷ MonadReshard m
   ⇒ m ()
 awaitStreamActive = do
-  streamName ← kinesisStreamName
+  name ← kinesisStreamName
   DescribeStreamResponse StreamDescription{..} ← runKinesis DescribeStream
     { describeStreamLimit = Just 1
     , describeStreamExclusiveStartShardId = Nothing
-    , describeStreamStreamName = streamName
+    , describeStreamStreamName = name
     }
   case streamDescriptionStreamStatus of
     StreamStatusActive → return ()
@@ -75,12 +64,12 @@ fetchShardsConduit
   ∷ MonadReshard m
   ⇒ Conduit (Maybe ShardId) m Shard
 fetchShardsConduit = do
-  streamName ← lift kinesisStreamName
+  name ← lift kinesisStreamName
   awaitForever $ \mshardId → do
     let req = DescribeStream
           { describeStreamExclusiveStartShardId = mshardId
           , describeStreamLimit = Nothing
-          , describeStreamStreamName = streamName
+          , describeStreamStreamName = name
           }
     resp@(DescribeStreamResponse StreamDescription{..}) ←
       lift $ runKinesis req

@@ -79,7 +79,7 @@ getBytesPerSecond
   → m Double
 getBytesPerSecond endpoint = do
   cred ← getCredential
-  filter ← dimensionFilters
+  filters ← dimensionFilters
   duration ← view oSampleDuration
 
   runCloudWatch cred $ do
@@ -90,7 +90,7 @@ getBytesPerSecond endpoint = do
 
     (datapoints, _) ←
       getMetricStatistics
-        filter
+        filters
         startTime
         endTime
         (kinesisEndpointToMetric endpoint)

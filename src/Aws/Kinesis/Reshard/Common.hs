@@ -56,10 +56,10 @@ awsConfiguration
   ∷ MonadReshard m
   ⇒ m Configuration
 awsConfiguration = do
-  credentials ← awsCredentials
+  cred ← awsCredentials
   return Configuration
     { timeInfo = Timestamp
-    , credentials = credentials
+    , credentials = cred
     , logger = defaultLog Warning
     }
 
