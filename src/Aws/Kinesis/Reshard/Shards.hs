@@ -85,7 +85,7 @@ fetchShardsConduit = do
       lift $ runKinesis req
     yield `mapM_` streamDescriptionShards
     _ ← traverse (leftover ∘ Just) $
-      describeStreamExclusiveStartShardId =<<
+      describeStreamExclusiveStartShardId =≪
         nextIteratedRequest req resp
     return ()
 
