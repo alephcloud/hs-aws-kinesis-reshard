@@ -17,6 +17,7 @@
 -- under the License.
 --
 
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
@@ -35,6 +36,8 @@ data Options
   , _oSecretAccessKey ∷ T.Text
   , _oRegion ∷ T.Text
   , _oStreamName ∷ T.Text
+  , _oSampleDuration ∷ Int
+  , _oShardCapacityThreshold ∷ Double
   } deriving Show
 
 makeLenses ''Options
@@ -71,6 +74,31 @@ streamNameParser =
       ⊕ metavar "SN"
       ⊕ help "The Kinesis stream name"
 
+sampleDurationParser ∷ Parser Int
+sampleDurationParser =
+  option auto $
+    long "sample-duration"
+      ⊕ short 'd'
+      ⊕ metavar "SD"
+      ⊕ help "The sample duration in seconds"
+      ⊕ value (60 * 60)
+      ⊕ showDefault
+
+capacityThresholdReader ∷ ReadM Double
+capacityThresholdReader = do
+  cap ← auto
+  if | cap > 0 ∧ cap <= 1 → return cap
+     | otherwise → readerError "Capacity threshold must be in range [0,1)"
+
+capacityThresholdParser ∷ Parser Double
+capacityThresholdParser =
+  option capacityThresholdReader $
+    long "shard-capacity-threshold"
+      ⊕ short 't'
+      ⊕ metavar "SCT"
+      ⊕ help "The threshold percent capacity per shard (max: 1)"
+      ⊕ value 0.1
+      ⊕ showDefault
 
 optionsParser ∷ Parser Options
 optionsParser =
@@ -79,6 +107,8 @@ optionsParser =
     ⊛ secretAccessKeyParser
     ⊛ regionParser
     ⊛ streamNameParser
+    ⊛ sampleDurationParser
+    ⊛ capacityThresholdParser
 
 parserInfo ∷ ParserInfo Options
 parserInfo =

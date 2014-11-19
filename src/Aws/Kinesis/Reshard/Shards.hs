@@ -46,6 +46,7 @@ import Control.Exception.Lifted
 import Control.Lens
 import Control.Monad.Error.Hoist
 import Control.Monad.Trans
+import Control.Monad.Unicode
 
 import qualified Data.List as L
 import Data.Maybe
@@ -116,6 +117,7 @@ fetchOpenShards
   ∷ MonadReshard m
   ⇒ m [Shard]
 fetchOpenShards = do
+  awaitStreamActive
   shards ← shardsSource
     $= CL.filter shardIsOpen
     $$ CL.consume
@@ -128,7 +130,8 @@ countOpenShards
     , Integral i
     )
   ⇒ m i
-countOpenShards =
+countOpenShards = do
+  awaitStreamActive
   shardsSource
     $= CL.filter shardIsOpen
     $$ counterSink

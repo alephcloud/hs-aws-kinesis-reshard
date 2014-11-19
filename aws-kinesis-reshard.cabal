@@ -19,6 +19,7 @@ executable aws-kinesis-reshard
   main-is:             Main.hs
   other-modules:       Aws.Kinesis.Reshard.Common
                      , Aws.Kinesis.Reshard.Exception
+                     , Aws.Kinesis.Reshard.Metrics
                      , Aws.Kinesis.Reshard.Monad
                      , Aws.Kinesis.Reshard.Options
                      , Aws.Kinesis.Reshard.Shards
