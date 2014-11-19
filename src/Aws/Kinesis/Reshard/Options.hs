@@ -1,6 +1,6 @@
 -- Copyright (c) 2013-2014 PivotCloud, Inc.
 --
--- Aws.Kinesis.Resharder.Options
+-- Aws.Kinesis.Reshard.Options
 --
 -- Please feel free to contact us at licensing@pivotmail.com with any
 -- contributions, additions, or other feedback; we would love to hear from
@@ -20,7 +20,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
-module Aws.Kinesis.Resharder.Options where
+module Aws.Kinesis.Reshard.Options where
 
 import qualified Data.Text as T
 import Options.Applicative
@@ -34,6 +34,7 @@ data Options
   { _oAccessKey ∷ T.Text
   , _oSecretAccessKey ∷ T.Text
   , _oRegion ∷ T.Text
+  , _oStreamName ∷ T.Text
   } deriving Show
 
 makeLenses ''Options
@@ -56,10 +57,20 @@ regionParser ∷ Parser T.Text
 regionParser =
   fmap T.pack ∘ option str $
     long "region"
+      ⊕ short 'r'
       ⊕ metavar "R"
       ⊕ help "The AWS region"
       ⊕ value "us-west-2"
       ⊕ showDefault
+
+streamNameParser ∷ Parser T.Text
+streamNameParser =
+  fmap T.pack ∘ option str $
+    long "stream-name"
+      ⊕ short 's'
+      ⊕ metavar "SN"
+      ⊕ help "The Kinesis stream name"
+
 
 optionsParser ∷ Parser Options
 optionsParser =
@@ -67,6 +78,7 @@ optionsParser =
     ⊛ accessKeyParser
     ⊛ secretAccessKeyParser
     ⊛ regionParser
+    ⊛ streamNameParser
 
 parserInfo ∷ ParserInfo Options
 parserInfo =

@@ -20,54 +20,72 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
 module Main where
 
 import AWS
 import AWS.CloudWatch
-import Aws.Kinesis.Resharder.Options
+import AWS.CloudWatch.Types
+
+import Aws.Kinesis.Reshard.Monad
+import Aws.Kinesis.Reshard.Options
+import Aws.Kinesis.Reshard.Shards
 
 import Control.Applicative
 import Control.Applicative.Unicode
 import Control.Exception.Lifted
 import Control.Lens
-import Control.Monad.Error.Class
-import Control.Monad.Reader.Class
 import Control.Monad.Trans
-import Control.Monad.Trans.Control
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.Resource
 import Control.Monad.Unicode
 import qualified Data.Text.Encoding as T
+import Data.Time
 import qualified Options.Applicative as OA
 import Prelude.Unicode
 
-type MonadResharder m
-  = ( MonadError SomeException m
-    , MonadReader Options m
-    , MonadIO m
-    , MonadBaseControl IO m
-    , MonadResource m
-    )
 
 getCredential
-  ∷ MonadResharder m
+  ∷ MonadReshard m
   ⇒ m Credential
 getCredential =
   pure newCredential
     ⊛ view (oAccessKey ∘ to T.encodeUtf8)
     ⊛ view (oSecretAccessKey ∘ to T.encodeUtf8)
 
+dimensionFilters
+  ∷ MonadReshard m
+  ⇒ m [DimensionFilter]
+dimensionFilters =
+  (:[]) ∘ ("StreamName",)
+    <$> view oStreamName
+
 app
-  ∷ MonadResharder m
+  ∷ MonadReshard m
   ⇒ m ()
 app = do
   cred ← getCredential
   res ← runCloudWatch cred $ do
     setRegion =≪ lift (view oRegion)
-    listMetrics [] Nothing (Just "AWS/Kinesis") Nothing
+
+    now ← liftIO getCurrentTime
+    let end = addUTCTime (-43200) now
+    let start = addUTCTime (-43200) end
+
+    filter ← lift dimensionFilters
+
+    getMetricStatistics
+      filter
+      start
+      end
+      "PutRecord.Bytes"
+      "AWS/Kinesis"
+      (60 * 60 * 60)
+      allStatistics
+      Nothing
   liftIO . print $ res
 
 main ∷ IO ()
