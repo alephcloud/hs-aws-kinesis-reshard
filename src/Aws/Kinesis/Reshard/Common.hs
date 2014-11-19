@@ -30,8 +30,6 @@ module Aws.Kinesis.Reshard.Common
 import Aws
 import Aws.General
 import Aws.Kinesis
-import Aws.Kinesis.Reshard.Exception
-import Aws.Kinesis.Reshard.Options
 import Aws.Kinesis.Reshard.Monad
 
 import Control.Applicative

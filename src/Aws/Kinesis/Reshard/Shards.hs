@@ -22,7 +22,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
 module Aws.Kinesis.Reshard.Shards
@@ -36,14 +35,12 @@ module Aws.Kinesis.Reshard.Shards
 import Aws.Core
 import Aws.Kinesis
 import Aws.Kinesis.Reshard.Common
-import Aws.Kinesis.Reshard.Exception
 import Aws.Kinesis.Reshard.Monad
 
 import Control.Applicative
 import Control.Exception.Lifted
 import Control.Lens
 import Control.Monad
-import Control.Monad.Error.Class
 import Control.Monad.Error.Hoist
 import Control.Monad.Trans
 import Control.Monad.Unicode

@@ -19,7 +19,6 @@
 
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
@@ -33,7 +32,6 @@ import AWS
 import AWS.CloudWatch
 import AWS.CloudWatch.Types
 
-import Aws.Kinesis.Reshard.Options
 import Aws.Kinesis.Reshard.Monad
 
 import Control.Applicative

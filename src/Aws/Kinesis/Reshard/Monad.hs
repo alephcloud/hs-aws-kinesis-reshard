@@ -19,9 +19,22 @@
 
 {-# LANGUAGE ConstraintKinds #-}
 
-module Aws.Kinesis.Reshard.Monad where
+module Aws.Kinesis.Reshard.Monad
+( MonadReshard
 
+, module Aws.Kinesis.Reshard.Exception
+, module Aws.Kinesis.Reshard.Options
+
+, MonadError(..)
+, MonadReader(..)
+, MonadIO(..)
+, MonadBaseControl(..)
+, MonadResource(..)
+) where
+
+import Aws.Kinesis.Reshard.Exception
 import Aws.Kinesis.Reshard.Options
+
 import Control.Exception.Lifted
 import Control.Monad.Error.Class
 import Control.Monad.Reader.Class

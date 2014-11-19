@@ -1,6 +1,6 @@
 -- Copyright (c) 2013-2014 PivotCloud, Inc.
 --
--- Main
+-- Aws.Kinesis.Reshard.Analysis
 --
 -- Please feel free to contact us at licensing@pivotmail.com with any
 -- contributions, additions, or other feedback; we would love to hear from
@@ -19,40 +19,33 @@
 
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
-module Main where
+module Aws.Kinesis.Reshard.Analysis
+( analyzeStream
+) where
 
-import Aws.Kinesis.Reshard.Analysis
-import Aws.Kinesis.Reshard.Monad
 import Aws.Kinesis.Reshard.Shards
-
-import Control.Concurrent.Lifted
+import Aws.Kinesis.Reshard.Metrics
+import Aws.Kinesis.Reshard.Monad
+import Control.Concurrent.Async.Lifted
 import Control.Lens
-import Control.Monad.Trans.Either
-import Control.Monad.Trans.Reader (runReaderT)
-import Control.Monad.Trans.Resource
-import Control.Monad.Unicode
-import Data.Traversable
-import qualified Options.Applicative as OA
 import Prelude.Unicode
 
-loop
+analyzeStream
   ∷ MonadReshard m
-  ⇒ m ()
-loop = do
-  recommendation ← analyzeStream
-  liftIO ∘ putStrLn $
-    case recommendation of
-      Nothing → "No resharding action recommended at this time"
-      Just rsa → "Will perform resharding action: " ++ show rsa
-  _ ← for recommendation performReshardingAction
-  threadDelay =≪ view oReshardingInterval
-  loop
-
-main ∷ IO ()
-main =
-  eitherT (fail ∘ show) return ∘ runResourceT $
-    liftIO (OA.execParser parserInfo)
-      ≫= runReaderT loop
+  ⇒ m (Maybe ReshardingAction)
+analyzeStream = do
+  (totalBps, shardCount) ← getBytesPerSecond `concurrently` countOpenShards
+  threshold ← view oShardCapacityThreshold
+  maximumShardCount ← view oMaximumShardCount
+  let percentCapacity = shardlyBps / maximumBps
+      maximumBps = 1000000
+      shardlyBps = totalBps / fromIntegral shardCount
+  return $
+    if | shardCount > maximumShardCount → Just MergeShardsAction
+       | percentCapacity < threshold * 0.5 ∧ shardCount > 1 → Just MergeShardsAction
+       | percentCapacity >= threshold ∧ shardCount < maximumShardCount → Just SplitShardsAction
+       | otherwise → Nothing
 
