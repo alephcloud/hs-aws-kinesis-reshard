@@ -28,6 +28,7 @@
 module Aws.Kinesis.Reshard.Shards
 ( fetchOpenShards
 , countOpenShards
+, awaitStreamActive
 ) where
 
 import Aws
@@ -54,6 +55,20 @@ import Data.Typeable
 import Data.Conduit
 import qualified Data.Conduit.List as CL
 import Prelude.Unicode
+
+awaitStreamActive
+  ∷ MonadReshard m
+  ⇒ m ()
+awaitStreamActive = do
+  streamName ← kinesisStreamName
+  DescribeStreamResponse StreamDescription{..} ← runKinesis DescribeStream
+    { describeStreamLimit = Just 1
+    , describeStreamExclusiveStartShardId = Nothing
+    , describeStreamStreamName = streamName
+    }
+  case streamDescriptionStreamStatus of
+    StreamStatusActive → return ()
+    _ → awaitStreamActive
 
 fetchShardsConduit
   ∷ MonadReshard m
