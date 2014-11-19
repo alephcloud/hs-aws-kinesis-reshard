@@ -29,14 +29,22 @@ module Aws.Kinesis.Reshard.Shards
 ( fetchOpenShards
 , countOpenShards
 , awaitStreamActive
+, ReshardingAction(..)
+, performReshardingAction
 ) where
 
 import Aws.Core
 import Aws.Kinesis
 import Aws.Kinesis.Reshard.Common
+import Aws.Kinesis.Reshard.Exception
 import Aws.Kinesis.Reshard.Monad
 
+import Control.Applicative
+import Control.Exception.Lifted
 import Control.Lens
+import Control.Monad
+import Control.Monad.Error.Class
+import Control.Monad.Error.Hoist
 import Control.Monad.Trans
 import Control.Monad.Unicode
 
@@ -45,6 +53,11 @@ import Data.Maybe
 import Data.Conduit
 import qualified Data.Conduit.List as CL
 import Prelude.Unicode
+
+data ReshardingAction
+  = SplitShardsAction
+  | MergeShardsAction
+  deriving (Eq, Show)
 
 awaitStreamActive
   ∷ MonadReshard m
@@ -124,3 +137,43 @@ countOpenShards = do
   shardsSource
     $= CL.filter shardIsOpen
     $$ counterSink
+
+-- | Get a 'PartitionHash' directly in between two other hashes.
+partitionHashInRange
+  ∷ (PartitionHash, PartitionHash)
+  → Either InvalidPartitionHashException PartitionHash
+partitionHashInRange range@(lower, upper) = do
+  unless (upper > lower) $
+    throwError $ InvalidPartitionHashRange range
+  let upperInteger = partitionHashInteger upper
+      lowerInteger = partitionHashInteger lower
+      middleInteger = lowerInteger + (upperInteger - lowerInteger) `div` 2
+  partitionHash middleInteger
+    & either (Left ∘ InvalidPartitionHash middleInteger) return
+
+performReshardingAction
+  ∷ MonadReshard m
+  ⇒ ReshardingAction
+  → m ()
+performReshardingAction SplitShardsAction = do
+  stream ← kinesisStreamName
+  shard ← (fetchOpenShards ^!? acts ∘ _head) <!?> SomeException (NoShardsFoundException stream)
+  startingHashKey ← partitionHashInRange (shardHashKeyRange shard) <%?> SomeException
+  SplitShardResponse ← runKinesis SplitShard
+    { splitShardNewStartingHashKey = startingHashKey
+    , splitShardShardToSplit = shardShardId shard
+    , splitShardStreamName = stream
+    }
+  return ()
+performReshardingAction MergeShardsAction = do
+  stream ← kinesisStreamName
+  openShards ← fetchOpenShards
+  case take 2 $ shardShardId <$> openShards of
+    [s,s'] → do
+      MergeShardsResponse ← runKinesis MergeShards
+        { mergeShardsShardToMerge = s
+        , mergeShardsAdjacentShardToMerge = s'
+        , mergeShardsStreamName = stream
+        }
+      return ()
+    _ → return ()

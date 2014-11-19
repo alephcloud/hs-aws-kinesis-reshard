@@ -26,8 +26,7 @@
 {-# LANGUAGE UnicodeSyntax #-}
 
 module Aws.Kinesis.Reshard.Metrics
-( KinesisEndpoint(..)
-, getBytesPerSecond
+( getBytesPerSecond
 ) where
 
 import AWS
@@ -39,24 +38,13 @@ import Aws.Kinesis.Reshard.Monad
 
 import Control.Applicative
 import Control.Applicative.Unicode
+import Control.Concurrent.Async.Lifted
 import Control.Lens
 import Control.Monad.Trans
 import Control.Monad.Unicode
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time
 import Prelude.Unicode
-
-data KinesisEndpoint
-  = KinesisPutRecord
-  | KinesisPutRecords
-
-kinesisEndpointToMetric
-  ∷ KinesisEndpoint
-  → T.Text
-kinesisEndpointToMetric = \case
-  KinesisPutRecord → "PutRecord.Bytes"
-  KinesisPutRecords → "PutRecords.Bytes"
 
 getCredential
   ∷ MonadReshard m
@@ -75,9 +63,8 @@ dimensionFilters =
 
 getBytesPerSecond
   ∷ MonadReshard m
-  ⇒ KinesisEndpoint
-  → m Double
-getBytesPerSecond endpoint = do
+  ⇒ m Double
+getBytesPerSecond = do
   cred ← getCredential
   filters ← dimensionFilters
   duration ← view oSampleDuration
@@ -86,18 +73,24 @@ getBytesPerSecond endpoint = do
     setRegion =≪ lift (view oRegion)
     endTime ← liftIO getCurrentTime
 
-    let startTime = addUTCTime (fromIntegral $ -duration) endTime
+    let startTime = addUTCTime (fromInteger $ -duration) endTime
 
-    (datapoints, _) ←
-      getMetricStatistics
-        filters
-        startTime
-        endTime
-        (kinesisEndpointToMetric endpoint)
-        "AWS/Kinesis"
-        duration
-        allStatistics
-        Nothing
+    let getMetrics metric = do
+          (datapoints, _) ← getMetricStatistics
+            filters
+            startTime
+            endTime
+            metric
+            "AWS/Kinesis"
+            (fromIntegral duration)
+            [StatisticSum]
+            Nothing
+          return $ foldr (\Datapoint{..} n → maybe n (+ n) datapointSum) 0 datapoints
 
-    let totalBytes = foldr (\Datapoint{..} n → maybe n (+ n) datapointSum) 0 datapoints
+
+    totalBytes ← runConcurrently $
+      pure (+)
+        ⊛ Concurrently (getMetrics "PutRecord.Bytes")
+        ⊛ Concurrently (getMetrics "PutRecords.Bytes")
+
     return $ totalBytes / fromIntegral duration

@@ -32,12 +32,14 @@ import Prelude.Unicode
 
 data Options
   = Options
-  { _oAccessKey ∷ T.Text
-  , _oSecretAccessKey ∷ T.Text
-  , _oRegion ∷ T.Text
-  , _oStreamName ∷ T.Text
-  , _oSampleDuration ∷ Int
-  , _oShardCapacityThreshold ∷ Double
+  { _oAccessKey ∷ !T.Text
+  , _oSecretAccessKey ∷ !T.Text
+  , _oRegion ∷ !T.Text
+  , _oStreamName ∷ !T.Text
+  , _oSampleDuration ∷ !Integer
+  , _oShardCapacityThreshold ∷ !Double
+  , _oMaximumShardCount ∷ !Int
+  , _oReshardingInterval ∷ !Int
   } deriving Show
 
 makeLenses ''Options
@@ -74,7 +76,7 @@ streamNameParser =
       ⊕ metavar "SN"
       ⊕ help "The Kinesis stream name"
 
-sampleDurationParser ∷ Parser Int
+sampleDurationParser ∷ Parser Integer
 sampleDurationParser =
   option auto $
     long "sample-duration"
@@ -100,6 +102,32 @@ capacityThresholdParser =
       ⊕ value 0.1
       ⊕ showDefault
 
+maximumShardCountReader ∷ ReadM Int
+maximumShardCountReader = do
+  count ← auto
+  if | count > 0 ∧ count <= 10 → return count
+     | otherwise → readerError "Maximum shard count must be in range [1,10]"
+
+maximumShardCountParser ∷ Parser Int
+maximumShardCountParser =
+  option maximumShardCountReader $
+    long "maximum-shard-count"
+      ⊕ short 'c'
+      ⊕ metavar "MSC"
+      ⊕ help "The maximum number of shards permitted on this stream (max: 10)"
+      ⊕ value 5
+      ⊕ showDefault
+
+reshardingIntervalParser ∷ Parser Int
+reshardingIntervalParser =
+  option auto $
+    long "resharding-interval"
+      ⊕ short 'i'
+      ⊕ metavar "RI"
+      ⊕ help "The time to wait before reanalyzing the stream in seconds"
+      ⊕ value 60000000
+      ⊕ showDefault
+
 optionsParser ∷ Parser Options
 optionsParser =
   pure Options
@@ -109,6 +137,8 @@ optionsParser =
     ⊛ streamNameParser
     ⊛ sampleDurationParser
     ⊛ capacityThresholdParser
+    ⊛ maximumShardCountParser
+    ⊛ reshardingIntervalParser
 
 parserInfo ∷ ParserInfo Options
 parserInfo =

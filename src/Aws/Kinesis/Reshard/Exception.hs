@@ -31,8 +31,17 @@ module Aws.Kinesis.Reshard.Exception
 , _InvalidStreamNameException
 , isnProposedStreamName
 , isnParsingError
+
+, NoShardsFoundException(NoShardsFoundException)
+, _NoShardsFoundException
+, nsfeStreamName
+
+, InvalidPartitionHashException(..)
+, _InvalidPartitionHashRange
+, _InvalidPartitionHash
 ) where
 
+import Aws.Kinesis.Types
 import Control.Exception.Lifted
 import Control.Lens
 import qualified Data.Text as T
@@ -40,8 +49,8 @@ import Data.Typeable
 
 data InvalidRegionException
   = InvalidRegionException
-  { _ireProposedRegion ∷ T.Text
-  , _ireParsingError ∷ T.Text
+  { _ireProposedRegion ∷ !T.Text
+  , _ireParsingError ∷ !T.Text
   } deriving (Eq, Typeable, Show)
 
 instance Exception InvalidRegionException
@@ -51,12 +60,30 @@ makePrisms ''InvalidRegionException
 
 data InvalidStreamNameException
   = InvalidStreamNameException
-  { _isnProposedStreamName ∷ T.Text
-  , _isnParsingError ∷ T.Text
+  { _isnProposedStreamName ∷ !T.Text
+  , _isnParsingError ∷ !T.Text
   } deriving (Eq, Typeable, Show)
 
 instance Exception InvalidStreamNameException
 
 makeLenses ''InvalidStreamNameException
 makePrisms ''InvalidStreamNameException
+
+newtype NoShardsFoundException
+  = NoShardsFoundException
+  { _nsfeStreamName ∷ StreamName
+  } deriving (Eq, Typeable, Show)
+
+instance Exception NoShardsFoundException
+
+makeLenses ''NoShardsFoundException
+makePrisms ''NoShardsFoundException
+
+data InvalidPartitionHashException
+   = InvalidPartitionHashRange (PartitionHash, PartitionHash)
+   | InvalidPartitionHash Integer T.Text
+   deriving (Eq, Typeable, Show)
+
+makePrisms ''InvalidPartitionHashException
+instance Exception InvalidPartitionHashException
 
