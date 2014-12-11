@@ -46,6 +46,6 @@ analyzeStream = do
   return $
     if | shardCount > maximumShardCount → Just MergeShardsAction
        | percentCapacity < threshold * 0.5 ∧ shardCount > 1 → Just MergeShardsAction
-       | percentCapacity >= threshold ∧ shardCount < maximumShardCount → Just SplitShardsAction
+       | percentCapacity ≥ threshold ∧ shardCount < maximumShardCount → Just SplitShardsAction
        | otherwise → Nothing
 
