@@ -15,3 +15,4 @@ kinesis-reshard \
   --region "us-west-2" \
   --stream-name "my-stream"
 ~~~~
+
