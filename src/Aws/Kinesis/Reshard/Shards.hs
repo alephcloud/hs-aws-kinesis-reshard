@@ -40,6 +40,7 @@ import Aws.Kinesis.Reshard.Monad
 import Control.Applicative
 import Control.Exception.Lifted
 import Control.Lens
+import Control.Lens.Action
 import Control.Monad
 import Control.Monad.Error.Hoist
 import Control.Monad.Trans
